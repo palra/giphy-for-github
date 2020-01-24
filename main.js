@@ -1,4 +1,4 @@
-const giphyAPIkey = 'dc6zaTOxFJmzC';
+const giphyAPIkey = 'NJOB7MTiUhWR9pmgTrpO2Yt9tS83e321';
 const errorGiphyId = 'haZOqHKz9tTfW';
 const noResultGiphyId = '14vK3Sc3zepWM0';
 const validRatings = ['y', 'g', 'pg', 'pg-13', 'r', 'nsfw', '', 'unrated'];
@@ -81,6 +81,8 @@ var getGiphyByPhrase = function (phrase) {
   });
 };
 
+var getGiphyByPanda = function() { return getGiphyByPhrase("panda"); };
+
 var getGiphyById = function (id) {
   return getJSON(`https://api.giphy.com/v1/gifs/translate?s=${id}&api_key=${giphyAPIkey}`).then(function (response) {
     return response.data;
@@ -94,6 +96,18 @@ var formatGiphyMarkdown = function (giphy, altText) {
   return `![${(altText || giphy.slug || '')}](https://media2.giphy.com/media/${giphy.id}/giphy.gif)`;
 };
 
+var handleGetGiphy = function(getGiphy, e) {
+  var textarea = e.target.closest('form').querySelector('textarea');
+  var selection = getSelectionInTextarea(textarea);
+  
+  if (selection.length) {
+    var altText = selection;
+  }
+
+  getGiphy.then(giphy => insertIntoTextarea(textarea, formatGiphyMarkdown(giphy, altText)))
+          .catch(error => insertIntoTextarea(textarea, formatGiphyMarkdown({id: errorGiphyId}, 'Sorry, something went wrong')))
+};
+
 var handleGIFButtonClick = function(e) {
   var textarea = e.target.closest('form').querySelector('textarea');
   var selection = getSelectionInTextarea(textarea);
@@ -103,24 +117,30 @@ var handleGIFButtonClick = function(e) {
   if (selection.length && isGiphyId(selection)) {
     getGiphy = getGiphyById(selection);
   } else if (selection.length) {
-    var altText = selection;
     getGiphy = getGiphyByPhrase(selection);
   } else {
     getGiphy = getRandomGiphy();
   }
-  getGiphy.then(giphy => insertIntoTextarea(textarea, formatGiphyMarkdown(giphy, altText)))
-          .catch(error => insertIntoTextarea(textarea, formatGiphyMarkdown({id: errorGiphyId}, 'Sorry, something went wrong')))
+  
+  handleGetGiphy(getGiphy, e);
+};
+
+var handleGIFPandaButtonClick = function(e) {
+    handleGetGiphy(getGiphyByPanda(), e);
 };
 
 var addGiphyToolgroup = function (toolbarEl) {
   if (toolbarEl.closest('#js-inline-comments-single-container-template')) {
     return;
   }
+
   if (toolbarEl.querySelector('.giphy-button')) {
     toolbarEl.querySelector('.giphy-button').remove();
   }
+
   var toolgroup = document.createElement('div');
   addClasses(toolgroup, 'toolbar-group', 'giphy-button');
+
   var giphyButton = document.createElement('button');
   giphyButton.innerHTML = 'GIF';
   addClasses(giphyButton, 'js-toolbar-item', 'toolbar-item', 'tooltipped', 'tooltipped-nw');
@@ -128,8 +148,18 @@ var addGiphyToolgroup = function (toolbarEl) {
   giphyButton.setAttribute('aria-label', 'Add a random giphy');
   giphyButton.setAttribute('data-ga-click', 'Markdown Toolbar, click, giphy');
   toolgroup.appendChild(giphyButton);
-  toolbarEl.appendChild(toolgroup);
   giphyButton.addEventListener('click', handleGIFButtonClick, true);
+
+  var pandaButton = document.createElement('button');
+  pandaButton.innerHTML = 'Panda';
+  addClasses(pandaButton, 'js-toolbar-item', 'toolbar-item', 'tooltipped', 'tooltipped-nw');
+  pandaButton.setAttribute('type', 'button');
+  pandaButton.setAttribute('aria-label', 'Add a random panda giphy');
+  pandaButton.setAttribute('data-ga-click', 'Markdown Toolbar, click, giphy');
+  toolgroup.appendChild(pandaButton);
+  pandaButton.addEventListener('click', handleGIFPandaButtonClick, true);
+
+  toolbarEl.appendChild(toolgroup);
 };
 
 var iterateOverToolbars = function (callback) {
